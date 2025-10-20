@@ -1,0 +1,6 @@
+# supabase/config.toml
+[db.seed]
+enabled = true
+# 폴더 전체
+sql_paths = ["./seed/*.sql"]
+

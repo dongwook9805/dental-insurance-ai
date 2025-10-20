@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>치과 보험 청구 도우미</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 0;
+        padding: 24px;
+        background: #f7f9fb;
+        color: #1f2933;
+      }
+      h1 {
+        font-size: 1.5rem;
+        margin-bottom: 16px;
+      }
+      textarea {
+        width: 100%;
+        min-height: 160px;
+        padding: 12px;
+        border: 1px solid #cbd5e0;
+        border-radius: 8px;
+        resize: vertical;
+        font-size: 0.95rem;
+      }
+      .input-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .tab-button {
+        border: none;
+        background: #e2e8f0;
+        color: #1f2933;
+        padding: 8px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: background 0.2s;
+      }
+      .tab-button.active {
+        background: #2563eb;
+        color: #ffffff;
+      }
+      .actions {
+        display: flex;
+        gap: 12px;
+        margin: 16px 0;
+      }
+      button {
+        padding: 10px 16px;
+        border: none;
+        border-radius: 8px;
+        background: #2563eb;
+        color: #fff;
+        font-size: 0.95rem;
+        cursor: pointer;
+      }
+      button.secondary {
+        background: #10b981;
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      .status {
+        min-height: 22px;
+        margin-bottom: 12px;
+        color: #ef4444;
+        font-size: 0.9rem;
+      }
+      .status.ok {
+        color: #0f766e;
+      }
+      .form-grid {
+        display: grid;
+        gap: 12px 16px;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 0.9rem;
+      }
+      .field label,
+      .field span.label {
+        font-weight: 600;
+        color: #243b53;
+      }
+      .field input,
+      .field select,
+      .field textarea {
+        padding: 10px;
+        border: 1px solid #cbd5e0;
+        border-radius: 8px;
+        font-size: 0.9rem;
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .chips label {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 6px 10px;
+        border: 1px solid #cbd5e0;
+        border-radius: 999px;
+        cursor: pointer;
+        background: #f8fafc;
+      }
+      .chips input {
+        accent-color: #2563eb;
+      }
+      .field.small-row {
+        flex-direction: row;
+        align-items: center;
+        gap: 10px;
+      }
+      .field.small-row label {
+        font-weight: 500;
+      }
+      .field note,
+      .note {
+        color: #52606d;
+        font-size: 0.8rem;
+      }
+      .history-group {
+        border: 1px solid #d5dde6;
+        border-radius: 10px;
+        padding: 12px;
+        margin-top: 8px;
+        background: #f8fafc;
+      }
+      .preview {
+        background: #f1f5f9;
+        border-radius: 8px;
+        padding: 12px;
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 0.8rem;
+        white-space: pre-wrap;
+        color: #243b53;
+      }
+      section {
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        border-bottom: 1px solid #e2e8f0;
+        padding: 8px;
+        text-align: left;
+        font-size: 0.9rem;
+      }
+      th {
+        background: #f1f5f9;
+      }
+      .chip {
+        display: inline-block;
+        margin-right: 6px;
+        padding: 4px 8px;
+        background: #e0f2fe;
+        color: #0f172a;
+        border-radius: 999px;
+        font-size: 0.85rem;
+      }
+      ul {
+        padding-left: 20px;
+      }
+      .hidden {
+        display: none;
+      }
+      .answer {
+        font-size: 0.95rem;
+        line-height: 1.5;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>치과 보험 청구 도우미</h1>
+    <section>
+      <div class="input-tabs">
+        <button class="tab-button active" data-mode="free">자유 입력</button>
+        <button class="tab-button" data-mode="form">간편 양식</button>
+      </div>
+      <div id="free-panel">
+        <label for="scenario">시나리오 / 질문</label>
+        <textarea
+          id="scenario"
+          placeholder="예: 2024-10-01 내원, 46번 치아 O면 크라운 재시행. 2023-08-25 동일 부위 크라운, 파절."></textarea>
+      </div>
+      <div id="form-panel" class="hidden">
+        <form id="structured-form">
+          <div class="form-grid">
+            <div class="field">
+              <label for="form-date">내원일</label>
+              <input type="date" id="form-date" />
+            </div>
+            <div class="field">
+              <label for="form-age">환자 나이</label>
+              <input type="number" id="form-age" min="0" placeholder="예: 35" />
+            </div>
+            <div class="field">
+              <label for="form-fdi">치아 번호 (FDI)</label>
+              <input type="number" id="form-fdi" min="11" max="48" placeholder="예: 46" />
+            </div>
+            <div class="field">
+              <span class="label">수복면</span>
+              <div class="chips">
+                <label><input type="checkbox" name="surface" value="O" />O</label>
+                <label><input type="checkbox" name="surface" value="M" />M</label>
+                <label><input type="checkbox" name="surface" value="D" />D</label>
+                <label><input type="checkbox" name="surface" value="B" />B</label>
+                <label><input type="checkbox" name="surface" value="L" />L</label>
+                <label><input type="checkbox" name="surface" value="I" />I</label>
+              </div>
+              <input type="text" id="surface-extra" placeholder="기타: 쉼표로 구분" />
+            </div>
+            <div class="field">
+              <label for="procedure-select">추천 대상</label>
+              <select id="procedure-select">
+                <option value="CRN_POST_MOLAR">CRN_POST_MOLAR (하악 대구치 크라운)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="reason-select">임상 사유</label>
+              <select id="reason-select">
+                <option value="fracture">파절 (fracture)</option>
+                <option value="secondary_caries">2차 우식 (secondary caries)</option>
+                <option value="custom">직접 입력</option>
+              </select>
+              <input type="text" id="reason-custom" class="hidden" placeholder="사유를 입력하세요" />
+            </div>
+            <div class="field">
+              <label for="visit-codes">동일 내원 청구 코드 (선택)</label>
+              <input type="text" id="visit-codes" placeholder="예: CRN_POST_MOLAR" />
+              <span class="note">쉼표로 구분</span>
+            </div>
+            <div class="field">
+              <label for="clinical-notes">임상 메모 (선택)</label>
+              <textarea id="clinical-notes" rows="3" placeholder="진단, 방사선 소견 등을 적어주세요"></textarea>
+            </div>
+            <div class="field small-row">
+              <label><input type="checkbox" id="history-toggle" /> 최근 동일 부위 이력 포함</label>
+            </div>
+          </div>
+          <div id="history-fields" class="history-group hidden">
+            <div class="form-grid">
+              <div class="field">
+                <label for="history-date">이전 시술일</label>
+                <input type="date" id="history-date" />
+              </div>
+              <div class="field">
+                <label for="history-code">이전 코드</label>
+                <input type="text" id="history-code" value="CRN_POST_MOLAR" />
+              </div>
+              <div class="field">
+                <label for="history-surfaces">이전 수복면 (선택)</label>
+                <input type="text" id="history-surfaces" placeholder="예: O" />
+              </div>
+              <div class="field">
+                <label for="history-reason">이전 사유</label>
+                <select id="history-reason">
+                  <option value="fracture">파절 (fracture)</option>
+                  <option value="secondary_caries">2차 우식 (secondary caries)</option>
+                  <option value="custom">직접 입력</option>
+                </select>
+                <input type="text" id="history-reason-custom" class="hidden" placeholder="사유를 입력하세요" />
+              </div>
+            </div>
+          </div>
+          <div class="field">
+            <span class="label">전송될 JSON</span>
+            <pre id="form-preview" class="preview">필수 입력을 채우면 미리보기가 표시됩니다.</pre>
+          </div>
+        </form>
+      </div>
+      <div class="actions">
+        <button id="claim-btn">추천(Claim Plan)</button>
+        <button id="qa-btn" class="secondary">질의(Q&amp;A)</button>
+      </div>
+      <div id="status" class="status"></div>
+    </section>
+
+    <section id="claim-result" class="hidden">
+      <h2>청구 추천 결과</h2>
+      <div id="billable-flag"></div>
+      <h3>인정 항목</h3>
+      <div id="items-container"></div>
+      <h3>불인정 항목</h3>
+      <ul id="denials-list"></ul>
+      <h3>설명</h3>
+      <p id="explanation" class="answer"></p>
+    </section>
+
+    <section id="qa-result" class="hidden">
+      <h2>질의 응답</h2>
+      <p id="qa-answer" class="answer"></p>
+    </section>
+
+    <script src="config.js"></script>
+    <script>
+      const defaultConfig = {
+        edgeBase: "/functions/v1",
+        headers: {},
+      };
+
+      function resolveConfig() {
+        if (window.CONFIG && typeof window.CONFIG === "object") {
+          const merged = {
+            ...defaultConfig,
+            ...window.CONFIG,
+          };
+          if (!merged.edgeBase || typeof merged.edgeBase !== "string") {
+            merged.edgeBase = defaultConfig.edgeBase;
+          }
+          if (!merged.headers || typeof merged.headers !== "object") {
+            merged.headers = {};
+          }
+          return merged;
+        }
+        return defaultConfig;
+      }
+
+      function sanitizeHeaders(baseHeaders, extraHeaders) {
+        const headers = { ...baseHeaders };
+        for (const [key, value] of Object.entries(extraHeaders || {})) {
+          if (typeof value === "string") {
+            headers[key] = value;
+          }
+        }
+        return headers;
+      }
+
+      (function main() {
+        const config = resolveConfig();
+        const EDGE_BASE = config.edgeBase.replace(/\/$/, "");
+
+        const scenarioInput = document.getElementById("scenario");
+        const claimBtn = document.getElementById("claim-btn");
+        const qaBtn = document.getElementById("qa-btn");
+        const statusEl = document.getElementById("status");
+        const claimSection = document.getElementById("claim-result");
+        const qaSection = document.getElementById("qa-result");
+        const itemsContainer = document.getElementById("items-container");
+        const denialsList = document.getElementById("denials-list");
+        const explanationEl = document.getElementById("explanation");
+        const billableFlag = document.getElementById("billable-flag");
+        const qaAnswer = document.getElementById("qa-answer");
+        const tabs = document.querySelectorAll(".tab-button");
+        const panels = {
+          free: document.getElementById("free-panel"),
+          form: document.getElementById("form-panel"),
+        };
+        const structuredForm = document.getElementById("structured-form");
+        const formPreview = document.getElementById("form-preview");
+        const historyToggle = document.getElementById("history-toggle");
+        const historyFields = document.getElementById("history-fields");
+        const reasonSelect = document.getElementById("reason-select");
+        const reasonCustom = document.getElementById("reason-custom");
+        const historyReasonSelect = document.getElementById("history-reason");
+        const historyReasonCustom = document.getElementById("history-reason-custom");
+        let inputMode = "free";
+
+        function switchMode(mode) {
+          inputMode = mode;
+          tabs.forEach((btn) => btn.classList.toggle("active", btn.dataset.mode === mode));
+          Object.entries(panels).forEach(([key, panel]) => {
+            panel.classList.toggle("hidden", key !== mode);
+          });
+          statusEl.textContent = "";
+          statusEl.classList.remove("ok");
+          if (mode === "form") {
+            updateFormPreview();
+          }
+        }
+
+        tabs.forEach((btn) => {
+          btn.addEventListener("click", () => switchMode(btn.dataset.mode));
+        });
+
+        function toggleCustomInput(selectEl, inputEl) {
+          if (selectEl.value === "custom") {
+            inputEl.classList.remove("hidden");
+            inputEl.focus();
+          } else {
+            inputEl.classList.add("hidden");
+            inputEl.value = "";
+          }
+        }
+
+        historyToggle.addEventListener("change", () => {
+          historyFields.classList.toggle("hidden", !historyToggle.checked);
+          if (historyToggle.checked && !document.getElementById("history-surfaces").value) {
+            const current = gatherSurfacesList();
+            if (current.length) {
+              document.getElementById("history-surfaces").value = current.join(", ");
+            }
+          }
+          updateFormPreview();
+        });
+
+        reasonSelect.addEventListener("change", () => {
+          toggleCustomInput(reasonSelect, reasonCustom);
+          updateFormPreview();
+        });
+
+        historyReasonSelect.addEventListener("change", () => {
+          toggleCustomInput(historyReasonSelect, historyReasonCustom);
+          updateFormPreview();
+        });
+
+        structuredForm.addEventListener("submit", (event) => event.preventDefault());
+        structuredForm.addEventListener("input", () => updateFormPreview());
+
+        function parseList(value, { uppercase = false } = {}) {
+          if (!value) return [];
+          return value
+            .split(/[,\/\s]+/)
+            .map((entry) => entry.trim())
+            .filter(Boolean)
+            .map((entry) => (uppercase ? entry.toUpperCase() : entry));
+        }
+
+        function gatherSurfacesList() {
+          const checked = Array.from(document.querySelectorAll("input[name='surface']:checked"))
+            .map((input) => input.value.toUpperCase());
+          const extra = parseList(document.getElementById("surface-extra").value, { uppercase: true });
+          return Array.from(new Set([...checked, ...extra]));
+        }
+
+        function buildFormScenario({ strict = true } = {}) {
+          const date = document.getElementById("form-date").value.trim();
+          const ageValue = document.getElementById("form-age").value.trim();
+          const fdiValue = document.getElementById("form-fdi").value.trim();
+          const surfaces = gatherSurfacesList();
+          const procedure = document.getElementById("procedure-select").value;
+          const reasonOption = reasonSelect.value;
+          const reasonValue = reasonOption === "custom" ? reasonCustom.value.trim() : reasonOption;
+          const visitCodes = parseList(document.getElementById("visit-codes").value);
+          const clinicalNotes = document.getElementById("clinical-notes").value.trim();
+
+          const missing = [];
+          if (!date) missing.push("내원일");
+          if (!ageValue) missing.push("환자 나이");
+          if (!fdiValue) missing.push("치아 번호");
+          if (!surfaces.length) missing.push("수복면");
+          if (!reasonValue) missing.push("임상 사유");
+
+          const age = Number(ageValue);
+          const fdi = Number(fdiValue);
+          if (ageValue && !Number.isFinite(age)) {
+            missing.push("나이는 숫자 입력");
+          }
+          if (fdiValue && !Number.isFinite(fdi)) {
+            missing.push("FDI 번호 형식");
+          }
+
+          if (strict && missing.length) {
+            throw new Error(`${missing.join(", ")} 입력이 필요합니다.`);
+          }
+          if (!strict && missing.length) {
+            return null;
+          }
+
+          const scenario = { date };
+          if (Number.isFinite(age)) {
+            scenario.patient = { age };
+          }
+          const tooth = {};
+          if (Number.isFinite(fdi)) {
+            tooth.fdi = fdi;
+          }
+          if (surfaces.length) {
+            tooth.surfaces = surfaces;
+          }
+          if (Object.keys(tooth).length) {
+            scenario.tooth = tooth;
+          }
+          if (procedure) {
+            scenario.intents = [procedure];
+          }
+          if (reasonValue || clinicalNotes) {
+            scenario.clinical = {};
+            if (reasonValue) {
+              scenario.clinical.reason = reasonValue;
+            }
+            if (clinicalNotes) {
+              scenario.clinical.indications = [clinicalNotes];
+            }
+          }
+          if (visitCodes.length) {
+            scenario.visit = { same_visit_codes: visitCodes };
+          }
+
+          if (historyToggle.checked) {
+            const historyDate = document.getElementById("history-date").value.trim();
+            const historyCode = document.getElementById("history-code").value.trim() || procedure;
+            const historySurfacesInput = document.getElementById("history-surfaces").value.trim();
+            const historySurfaces = historySurfacesInput
+              ? parseList(historySurfacesInput, { uppercase: true })
+              : surfaces;
+            const historyReasonOption = historyReasonSelect.value;
+            const historyReasonValue = historyReasonOption === "custom"
+              ? historyReasonCustom.value.trim()
+              : historyReasonOption;
+            const historyMissing = [];
+            if (!historyDate) historyMissing.push("이전 시술일");
+            if (!historySurfaces.length) historyMissing.push("이전 수복면");
+            if (!historyReasonValue) historyMissing.push("이전 사유");
+            if (strict && historyMissing.length) {
+              throw new Error(`최근 이력: ${historyMissing.join(", ")} 입력이 필요합니다.`);
+            }
+            if (historyDate && historySurfaces.length && historyReasonValue) {
+              const historyTooth = {};
+              if (Number.isFinite(fdi)) {
+                historyTooth.fdi = fdi;
+              }
+              historyTooth.surfaces = historySurfaces;
+              scenario.history = [
+                {
+                  code: historyCode,
+                  date: historyDate,
+                  tooth: historyTooth,
+                  reason: historyReasonValue,
+                },
+              ];
+            }
+          }
+
+          return scenario;
+        }
+
+        function updateFormPreview() {
+          const scenario = buildFormScenario({ strict: false });
+          if (!scenario) {
+            formPreview.textContent = "필수 입력을 채우면 미리보기가 표시됩니다.";
+            return;
+          }
+          formPreview.textContent = JSON.stringify(scenario, null, 2);
+        }
+
+        function setLoading(isLoading, message = "") {
+          claimBtn.disabled = isLoading;
+          qaBtn.disabled = isLoading;
+          statusEl.textContent = message;
+          if (message) {
+            statusEl.classList.remove("ok");
+          }
+        }
+
+        function finishStatus(message, ok = false) {
+          statusEl.textContent = message;
+          statusEl.classList.toggle("ok", ok);
+        }
+
+        function clearResults() {
+          claimSection.classList.add("hidden");
+          qaSection.classList.add("hidden");
+          itemsContainer.innerHTML = "";
+          denialsList.innerHTML = "";
+          explanationEl.textContent = "";
+          billableFlag.textContent = "";
+          qaAnswer.textContent = "";
+        }
+
+        function renderItems(items) {
+          if (!items.length) {
+            itemsContainer.innerHTML = "<p>인정 항목 없음</p>";
+            return;
+          }
+          const rows = items
+            .map((item) => {
+              const surfaces = (item.tooth?.surfaces || []).join(", ");
+              const citations = (item.citations || [])
+                .map((c) => `<span class="chip">[${c.title} #${c.chunk_index}]</span>`)
+                .join("");
+              const docs = (item.docs_required || []).join(", ") || "-";
+              return `
+                <tr>
+                  <td>${item.procedure_code}</td>
+                  <td>${item.description}</td>
+                  <td>${item.tooth?.fdi ?? "-"} / ${surfaces || "-"}</td>
+                  <td>${item.quantity}</td>
+                  <td>${item.reason}</td>
+                  <td>${docs}</td>
+                  <td>${citations}</td>
+                </tr>
+              `;
+            })
+            .join("");
+          itemsContainer.innerHTML = `
+            <table>
+              <thead>
+                <tr>
+                  <th>코드</th>
+                  <th>설명</th>
+                  <th>치아/면</th>
+                  <th>수량</th>
+                  <th>사유</th>
+                  <th>필요 서류</th>
+                  <th>근거</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          `;
+        }
+
+        function renderDenials(denials) {
+          if (!denials.length) {
+            denialsList.innerHTML = "<li>불인정 항목 없음</li>";
+            return;
+          }
+          denialsList.innerHTML = denials
+            .map((denial) => {
+              const citations = (denial.citations || [])
+                .map((c) => `<span class="chip">[${c.title} #${c.chunk_index}]</span>`)
+                .join("");
+              return `<li>${denial.reason} ${citations}</li>`;
+            })
+            .join("");
+        }
+
+        async function callEdge(endpoint, payload) {
+          const isString = typeof payload === "string";
+          const baseHeaders = isString
+            ? { "Content-Type": "text/plain;charset=utf-8" }
+            : { "Content-Type": "application/json" };
+          const headers = sanitizeHeaders(baseHeaders, config.headers);
+          const response = await fetch(`${EDGE_BASE}/${endpoint}`, {
+            method: "POST",
+            headers,
+            body: isString ? payload : JSON.stringify(payload),
+          });
+          const data = await response.json().catch(() => ({}));
+          return { ok: response.ok, data };
+        }
+
+        async function handleClaim() {
+          clearResults();
+          let payload;
+          try {
+            if (inputMode === "free") {
+              payload = scenarioInput.value.trim();
+              if (!payload) {
+                finishStatus("입력값이 필요합니다.");
+                return;
+              }
+            } else {
+              payload = buildFormScenario();
+            }
+          } catch (error) {
+            finishStatus(error.message);
+            return;
+          }
+
+          setLoading(true, "청구 추천을 계산 중…");
+          try {
+            const { ok, data } = await callEdge("claim-plan", payload);
+            if (!ok || !data?.ok) {
+              finishStatus(data?.explanations || "처리 실패");
+              return;
+            }
+            billableFlag.textContent = data.billable ? "청구 가능" : "청구 불가";
+            renderItems(data.items || []);
+            renderDenials(data.denials || []);
+            explanationEl.textContent = data.explanations || "";
+            claimSection.classList.remove("hidden");
+            finishStatus("완료", true);
+          } catch (error) {
+            console.error(error);
+            finishStatus("요청 처리 중 오류가 발생했습니다.");
+          } finally {
+            setLoading(false);
+          }
+        }
+
+        async function handleQA() {
+          clearResults();
+          let payload;
+          try {
+            if (inputMode === "free") {
+              payload = scenarioInput.value.trim();
+              if (!payload) {
+                finishStatus("질의 내용이 필요합니다.");
+                return;
+              }
+            } else {
+              const scenario = buildFormScenario();
+              payload = JSON.stringify(scenario, null, 2);
+            }
+          } catch (error) {
+                finishStatus(error.message);
+                return;
+          }
+
+          setLoading(true, "질의를 처리 중…");
+          try {
+            const { ok, data } = await callEdge("rag-answer", payload);
+            if (!ok || !data?.ok) {
+              finishStatus(data?.answer || "답변을 찾지 못했습니다.");
+              return;
+            }
+            qaAnswer.textContent = data.answer;
+            qaSection.classList.remove("hidden");
+            finishStatus("완료", true);
+          } catch (error) {
+            console.error(error);
+            finishStatus("요청 처리 중 오류가 발생했습니다.");
+          } finally {
+            setLoading(false);
+          }
+        }
+
+        claimBtn.addEventListener("click", handleClaim);
+        qaBtn.addEventListener("click", handleQA);
+
+        switchMode("free");
+        updateFormPreview();
+      })();
+    </script>
+  </body>
+</html>
