@@ -1,3 +1,4 @@
 # Ignore local deployment config for GitHub Pages
 docs/config.js
 .DS_Store
+pdf_out/*.pdf
