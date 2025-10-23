@@ -21,6 +21,7 @@ import argparse
 import json
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -156,6 +157,16 @@ def main() -> None:
     parser.add_argument("--delay", type=float, default=0.5, help="Delay between requests (seconds)")
     parser.add_argument("--min-kb", type=int, default=10, help="Minimum PDF size in KB")
     parser.add_argument("--group", default="01", help="ntstDcmGrpCd (default: 01)")
+    parser.add_argument(
+        "--log",
+        default=None,
+        help="Optional log file path (messages will also be appended here)",
+    )
+    parser.add_argument(
+        "--log-dir",
+        default="./log",
+        help="Directory to place timestamped log files when --log is omitted (default: ./log)",
+    )
     args = parser.parse_args()
 
     if args.start > args.end:
@@ -164,6 +175,21 @@ def main() -> None:
 
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    log_file = None
+    if args.log:
+        log_path = Path(args.log)
+    else:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        log_path = Path(args.log_dir) / f"{timestamp}.log"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    log_file = log_path.open("a", encoding="utf-8")
+
+    def log(message: str, *, err: bool = False) -> None:
+        print(message, file=sys.stderr if err else sys.stdout, flush=True)
+        if log_file:
+            log_file.write(message + "\n")
+            log_file.flush()
 
     session = build_session()
     total = args.end - args.start + 1
@@ -174,16 +200,18 @@ def main() -> None:
         try:
             success = fetch_case(session, ntst_id, out_dir, args.min_kb, args.group)
         except Exception as exc:
-            print(f"[{idx}/{total}] {ntst_id} error: {exc}", file=sys.stderr)
+            log(f"[{idx}/{total}] {ntst_id} error: {exc}", err=True)
         if success:
             saved += 1
-            print(f"[{idx}/{total}] {ntst_id} saved")
+            log(f"[{idx}/{total}] {ntst_id} saved")
         else:
             skipped += 1
-            print(f"[{idx}/{total}] {ntst_id} skipped")
+            log(f"[{idx}/{total}] {ntst_id} skipped")
         time.sleep(args.delay)
 
-    print(f"[DONE] saved={saved}, skipped={skipped}, total={total}")
+    log(f"[DONE] saved={saved}, skipped={skipped}, total={total}")
+
+    log_file.close()
 
 
 if __name__ == "__main__":

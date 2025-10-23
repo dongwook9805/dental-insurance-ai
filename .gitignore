@@ -2,3 +2,4 @@
 docs/config.js
 .DS_Store
 pdf_out/*.pdf
+log/
