@@ -184,6 +184,8 @@ def main() -> None:
         log_path = Path(args.log_dir) / f"{timestamp}.log"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_file = log_path.open("a", encoding="utf-8")
+    log_file.write(f"# Command: {' '.join(map(str, sys.argv))}\n")
+    log_file.flush()
 
     def log(message: str, *, err: bool = False) -> None:
         print(message, file=sys.stderr if err else sys.stdout, flush=True)
